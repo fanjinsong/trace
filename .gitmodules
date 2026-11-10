@@ -1,0 +1,4 @@
+[submodule "ebpf-trace/native_lua_stack_profile/lua"]
+	path = ebpf-trace/native_lua_stack_profile/lua
+	url = https://github.com/lua/lua.git
+	branch = v5.4
