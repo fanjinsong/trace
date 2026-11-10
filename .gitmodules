@@ -2,3 +2,6 @@
 	path = ebpf-trace/native_lua_stack_profile/lua
 	url = https://github.com/lua/lua.git
 	branch = v5.4
+[submodule "ebpf-trace/native_lua_stack_profile/flamegraph"]
+	path = ebpf-trace/native_lua_stack_profile/flamegraph
+	url = https://github.com/brendangregg/FlameGraph.git

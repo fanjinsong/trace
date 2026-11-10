@@ -418,7 +418,11 @@ class DwarfUnwinder:
             self._callback_error = "frame callback: %s" % exc
             return 1
 
-    def unwind(self, snapshot: Snapshot) -> UnwindResult:
+    def unwind(self, snapshot: Snapshot, *, process_exited: bool = False) -> UnwindResult:
+        """process_exited 仅用于调用方已确认原目标退出后的缓冲快照。
+
+        此时继续使用会话持有的 ELF 和旧映射；已有映射错误仍然不可绕过。
+        """
         if self._dwfl is None:
             raise RuntimeError("unwinder is closed")
         if snapshot.pid != self.pid:
@@ -427,17 +431,18 @@ class DwarfUnwinder:
             return UnwindResult((), "failed", "invalid x86-64 registers or stack base")
         if self._map_error:
             return UnwindResult((), "failed", self._map_error)
-        try:
-            current = _maps(self.pid)
-        except OSError as exc:
-            # 进程退出后，已打开的 ELF 文件描述符仍然有效。
-            # 此时也不会再产生新映射，避免将新布局混入旧快照。
-            if Path("/proc/%d" % self.pid).exists():
-                return UnwindResult((), "failed", "cannot validate module mappings: %s" % exc)
-        else:
-            if current != self._mappings:
-                self._map_error = "module mappings changed; restart capture to establish a new ELF layout"
-                return UnwindResult((), "failed", self._map_error)
+        if not process_exited:
+            try:
+                current = _maps(self.pid)
+            except OSError as exc:
+                # 进程退出后，已打开的 ELF 文件描述符仍然有效。
+                # 此时也不会再产生新映射，避免将新布局混入旧快照。
+                if Path("/proc/%d" % self.pid).exists():
+                    return UnwindResult((), "failed", "cannot validate module mappings: %s" % exc)
+            else:
+                if current != self._mappings:
+                    self._map_error = "module mappings changed; restart capture to establish a new ELF layout"
+                    return UnwindResult((), "failed", self._map_error)
         self._snapshot = snapshot
         self._frames = []
         self._callback_error = ""
